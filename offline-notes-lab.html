@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offline Notes Lab</title>
+<style>
+  :root{
+    --paper:#f6f4ee;
+    --ink:#1a1a1a;
+    --rule:#c9c4b6;
+    --blue:#2b4b6f;
+    --muted:#6b675c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Georgia', 'Times New Roman', serif;
+    line-height:1.5;
+  }
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:18px 32px;
+    border-bottom:1px solid var(--rule);
+  }
+  header .brand{font-weight:700;letter-spacing:.02em;}
+  header .status{font-family:Arial, sans-serif;font-size:13px;color:var(--muted);}
+  .layout{display:flex;max-width:1100px;margin:0 auto;}
+  nav{
+    width:220px;
+    padding:32px 20px;
+    border-right:1px solid var(--rule);
+    font-family:Arial, sans-serif;
+    font-size:14px;
+  }
+  nav .label{color:var(--muted);font-size:12px;margin-bottom:14px;}
+  nav ol{list-style:none;margin:0;padding:0;}
+  nav li{padding:6px 0;cursor:pointer;}
+  nav li.done{color:var(--blue);}
+  nav .progress{margin-top:20px;color:var(--muted);font-size:12px;}
+  main{flex:1;padding:32px 40px 60px;}
+  .eyebrow{color:var(--muted);font-size:13px;margin-bottom:6px;}
+  h1{font-size:44px;line-height:1.15;margin:0 0 24px;max-width:600px;}
+  .meta p{margin:2px 0;font-weight:700;}
+  .meta{margin-bottom:20px;}
+  .intro{color:var(--muted);max-width:560px;margin-bottom:36px;}
+  .split{display:flex;gap:40px;flex-wrap:wrap;}
+  .notes-list{flex:1;min-width:260px;}
+  .notes-list h2{border-bottom:1px solid var(--rule);padding-bottom:10px;font-size:18px;}
+  .note-item{margin-bottom:18px;}
+  .note-item h3{margin:0 0 4px;font-size:16px;}
+  .note-item p{margin:0;color:var(--muted);}
+  .note-item time{font-size:12px;color:var(--muted);}
+  form{
+    width:280px;
+    border:1px solid var(--ink);
+    padding:22px;
+    font-family:Arial, sans-serif;
+  }
+  form h2{margin:0 0 16px;font-family:Georgia, serif;font-size:18px;}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  input, textarea{
+    width:100%;
+    padding:8px;
+    margin-bottom:14px;
+    border:1px solid var(--rule);
+    background:#fff;
+    font-family:Arial, sans-serif;
+    font-size:14px;
+  }
+  textarea{min-height:80px;resize:vertical;}
+  button{
+    width:100%;
+    padding:10px;
+    background:var(--ink);
+    color:#fff;
+    border:none;
+    font-family:Arial, sans-serif;
+    cursor:pointer;
+  }
+  button:hover{background:var(--blue);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Offline Notes Lab</div>
+  <div class="status" id="status">Online</div>
+</header>
+
+<div class="layout">
+  <nav>
+    <div class="label">WORKSHOP MAP</div>
+    <ol id="steps">
+      <li>1. Create the shell</li>
+      <li>2. Make it installable</li>
+      <li>3. Make it offline</li>
+      <li>4. Test the boundary</li>
+      <li>5. Deploy it</li>
+    </ol>
+    <div class="progress" id="progress">0% complete</div>
+  </nav>
+
+  <main>
+    <div class="eyebrow">Foundation track</div>
+    <h1>Keep learning<br>when the<br>network leaves.</h1>
+
+    <div class="meta">
+      <p id="name">Ngabe Jesse Joseph </p>
+      <p id="course">Electrical Electronics engineering</p>
+      <p id="matric">2025/2/103350EE</p>
+    </div>
+
+    <p class="intro">Save a note, refresh the page, then test the same experience with the network turned off.</p>
+
+    <div class="split">
+      <div class="notes-list">
+        <h2>Notes from the lab</h2>
+        <div id="noteList"></div>
+      </div>
+
+      <form id="noteForm">
+        <h2>Write a note</h2>
+        <label for="title">Title</label>
+        <input id="title" type="text" required>
+        <label for="observation">Observation</label>
+        <textarea id="observation" required></textarea>
+        <button type="submit">Save locally</button>
+      </form>
+    </div>
+  </main>
+</div>
+
+<script>
+  // Steps: click to mark done, progress updates automatically
+  const steps = document.querySelectorAll('#steps li');
+  steps.forEach(li => li.addEventListener('click', () => {
+    li.classList.toggle('done');
+    updateProgress();
+    localStorage.setItem('lab-steps', JSON.stringify(
+      [...steps].map(s => s.classList.contains('done'))
+    ));
+  }));
+
+  function updateProgress(){
+    const done = document.querySelectorAll('#steps li.done').length;
+    document.getElementById('progress').textContent =
+      Math.round((done / steps.length) * 100) + '% complete';
+  }
+
+  // Restore step state
+  const savedSteps = JSON.parse(localStorage.getItem('lab-steps') || 'null');
+  if (savedSteps) {
+    steps.forEach((li, i) => { if (savedSteps[i]) li.classList.add('done'); });
+    updateProgress();
+  }
+
+  // Notes: saved to localStorage, so they persist offline and after refresh
+  const form = document.getElementById('noteForm');
+  const list = document.getElementById('noteList');
+
+  function loadNotes(){
+    return JSON.parse(localStorage.getItem('lab-notes') || '[]');
+  }
+  function renderNotes(){
+    const notes = loadNotes();
+    list.innerHTML = notes.length ? '' : '<p style="color:#6b675c">No notes yet.</p>';
+    notes.slice().reverse().forEach(n => {
+      const div = document.createElement('div');
+      div.className = 'note-item';
+      div.innerHTML = `<h3>${n.title}</h3><p>${n.observation}</p><time>${n.date}</time>`;
+      list.appendChild(div);
+    });
+  }
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const notes = loadNotes();
+    notes.push({
+      title: document.getElementById('title').value,
+      observation: document.getElementById('observation').value,
+      date: new Date().toLocaleDateString()
+    });
+    localStorage.setItem('lab-notes', JSON.stringify(notes));
+    form.reset();
+    renderNotes();
+  });
+  renderNotes();
+
+  // Online/offline status
+  function updateStatus(){
+    document.getElementById('status').textContent = navigator.onLine ? 'Online' : 'Offline';
+  }
+  window.addEventListener('online', updateStatus);
+  window.addEventListener('offline', updateStatus);
+  updateStatus();
+</script>
+
+</body>
+</html>
